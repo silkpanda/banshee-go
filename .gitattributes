@@ -1,0 +1,18 @@
+# Store text with LF line endings in the repo, whatever the machine.
+# Stops the "LF will be replaced by CRLF" churn when developing on Windows.
+* text=auto
+
+# Windows scripts need CRLF to run; shell scripts need LF.
+*.bat text eol=crlf
+*.cmd text eol=crlf
+*.ps1 text eol=crlf
+*.sh  text eol=lf
+
+# Never touch binary files.
+*.png    binary
+*.jpg    binary
+*.ico    binary
+*.pdf    binary
+*.docx   binary
+*.xlsx   binary
+*.sqlite3 binary

@@ -1,0 +1,63 @@
+# Runs the checks on GitHub's machines for every push and pull request, so each
+# one gets a green check or a red cross. Uses the exact same Go and Node versions
+# as the local Windows machine so a local pass means a CI pass.
+name: Tests
+
+on:
+  push:
+  pull_request:
+    branches: [main]
+
+permissions:
+  contents: read
+
+concurrency:
+  group: tests-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  test:
+    runs-on: windows-latest
+    timeout-minutes: 20
+
+    # Throwaway values the app needs in CI. Real secrets stay in GitHub Secrets or local .env.
+    env:
+      BANSHEE_RELAY_URL: https://relay.example.com
+      BANSHEE_DEVICE_TOKEN: ci-only-throwaway-not-a-secret
+
+    steps:
+      - name: Check out the code
+        uses: actions/checkout@v4
+
+      - name: Set up Go
+        uses: actions/setup-go@v5
+        with:
+          go-version: "1.27.4"
+          cache: true
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: "24"
+          cache: npm
+          cache-dependency-path: frontend/package-lock.json
+
+      - name: Install frontend dependencies (from lockfile)
+        run: npm --prefix frontend ci
+
+      - name: Typecheck and build frontend
+        run: |
+          npm --prefix frontend run typecheck
+          npm --prefix frontend test
+          npm --prefix frontend run build
+
+      - name: Go static analysis (go vet)
+        run: go vet ./...
+
+      - name: Run Go tests
+        run: go test -v ./...
+
+      - name: Build Wails Windows binary
+        run: |
+          go install github.com/wailsapp/wails/v2/cmd/wails@v2.17.1
+          wails build -clean
